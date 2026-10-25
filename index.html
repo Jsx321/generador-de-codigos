@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c55d1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Códigos">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-512.png">
+<style>:root{color-scheme:light}body{margin:0}</style>
+<title>Generador de Códigos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: una columna angosta. Arriba el generador (código grande, coloreado por tipo de carácter); debajo el historial agrupado por día. */
+  :root {
+    --bg: #edf0f3;
+    --surface: #fbfcfd;
+    --ink: #101a24;
+    --muted: #556473;
+    --line: #d5dce3;
+    --accent: #2c55d1;
+    --accent-ink: #ffffff;
+    --danger: #b3261e;
+    --danger-ink: #ffffff;
+    --c-upper: #2c55d1;
+    --c-lower: #101a24;
+    --c-digit: #b4531a;
+    --c-symbol: #a02f7a;
+    --font-ui: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-code: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e151c;
+      --surface: #151e27;
+      --ink: #e6edf3;
+      --muted: #93a4b4;
+      --line: #26323e;
+      --accent: #7b9cff;
+      --accent-ink: #0e151c;
+      --danger: #ff8a80;
+      --danger-ink: #1a0a09;
+      --c-upper: #8ea9ff;
+      --c-lower: #e6edf3;
+      --c-digit: #f0a15c;
+      --c-symbol: #e58bc4;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e151c;
+    --surface: #151e27;
+    --ink: #e6edf3;
+    --muted: #93a4b4;
+    --line: #26323e;
+    --accent: #7b9cff;
+    --accent-ink: #0e151c;
+    --danger: #ff8a80;
+    --danger-ink: #1a0a09;
+    --c-upper: #8ea9ff;
+    --c-lower: #e6edf3;
+    --c-digit: #f0a15c;
+    --c-symbol: #e58bc4;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1.5;
+    padding-block: 32px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+  h1 { font-size: clamp(1.6rem, 5vw, 2.1rem); line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  h2 { font-size: 1.15rem; margin: 0; font-weight: 700; }
+  h3 { font-size: 0.95rem; margin: 0; font-weight: 600; }
+  .sub { margin: 8px 0 0; color: var(--muted); max-width: 52ch; }
+
+  .gen {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 1px 2px rgba(16, 26, 36, 0.06);
+  }
+  .code {
+    font-family: var(--font-code);
+    font-weight: 600;
+    font-size: clamp(1.15rem, 5.2vw, 2rem);
+    letter-spacing: 0.03em;
+    line-height: 1.35;
+    word-break: break-all;
+    min-height: 2.7em;
+    display: flex;
+    align-items: center;
+    user-select: all;
+  }
+  .code.empty { color: var(--muted); letter-spacing: 0.12em; user-select: none; }
+  .c-u { color: var(--c-upper); }
+  .c-l { color: var(--c-lower); }
+  .c-d { color: var(--c-digit); }
+  .c-s { color: var(--c-symbol); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; list-style: none; margin: 0; padding: 0; font-size: 0.85rem; color: var(--muted); }
+  .legend li { display: flex; align-items: baseline; gap: 8px; }
+  .legend b { font-family: var(--font-code); font-weight: 600; font-size: 0.95rem; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  button { font: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 0;
+    border-radius: 10px;
+    padding: 12px 22px;
+    font-weight: 600;
+    min-height: 44px;
+  }
+  .primary:hover { filter: brightness(1.08); }
+  .ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-weight: 500;
+    min-height: 44px;
+  }
+  .ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .ghost:disabled { opacity: 0.5; cursor: default; }
+
+  .hist { display: flex; flex-direction: column; gap: 12px; }
+  .hist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .count { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+  .day { display: flex; flex-direction: column; margin-top: 12px; }
+  .day h3 { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .row {
+    display: grid;
+    grid-template-columns: 6.5rem max-content minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .time { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hcode { font-family: var(--font-code); font-size: 0.95rem; font-weight: 600; letter-spacing: 0.02em; user-select: all; }
+  .name {
+    font: inherit;
+    font-size: 0.95rem;
+    min-width: 0;
+    width: 100%;
+    padding: 8px 10px;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+  }
+  .name::placeholder { color: var(--muted); }
+  .name:hover { border-color: var(--line); }
+  .name:focus { border-color: var(--accent); background: var(--surface); }
+  .mini { padding: 8px 14px; min-height: 36px; border-radius: 8px; font-size: 0.9rem; }
+  .danger { background: var(--danger); color: var(--danger-ink); border: 0; font-weight: 600; }
+  .danger:hover:not(:disabled) { filter: brightness(1.08); }
+  .danger:disabled { opacity: 0.6; cursor: default; }
+  .confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--danger);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .confirm p { margin: 0; flex: 1 1 16rem; min-width: 0; }
+  .confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .textarea {
+    width: 100%;
+    min-height: 12rem;
+    padding: 10px;
+    font-family: var(--font-code);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    resize: vertical;
+    white-space: pre;
+    overflow: auto;
+  }
+  .hist-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; }
+  .more { display: flex; justify-content: center; margin-top: 16px; }
+
+  .empty-state { margin: 8px 0 0; padding: 24px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); }
+  .empty-state strong { color: var(--ink); }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    max-width: calc(100vw - 32px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  @media (max-width: 640px) {
+    .gen { padding: 18px; }
+    .row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "time copy" "code code" "name name";
+      row-gap: 6px;
+    }
+    .time { grid-area: time; }
+    .hcode { grid-area: code; word-break: break-all; }
+    .name { grid-area: name; border-color: var(--line); }
+    .mini { grid-area: copy; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .primary, .ghost, .name { transition: border-color 0.15s, color 0.15s, filter 0.15s; }
+  }
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Generador de códigos</h1>
+    <p class="sub">Códigos de 20 caracteres con mayúsculas, minúsculas, números y símbolos en orden aleatorio.</p>
+  </header>
+
+  <section class="gen" aria-label="Generador">
+    <div id="code" class="code empty" aria-live="polite">••••••••••••••••••••</div>
+    <ul class="legend" aria-label="Colores por tipo de carácter">
+      <li><b style="color: var(--c-upper)">AB</b> mayúsculas</li>
+      <li><b style="color: var(--c-lower)">ab</b> minúsculas</li>
+      <li><b style="color: var(--c-digit)">19</b> números</li>
+      <li><b style="color: var(--c-symbol)">#%</b> símbolos</li>
+    </ul>
+    <div class="actions">
+      <button id="gen" class="primary" type="button">Generar código</button>
+      <button id="copy" class="ghost" type="button" disabled>Copiar</button>
+    </div>
+  </section>
+
+  <section class="hist" aria-label="Historial">
+    <div class="hist-head">
+      <h2>Historial</h2>
+      <div class="hist-actions">
+        <span id="count" class="count"></span>
+        <button id="dl" class="ghost mini" type="button" disabled>Descargar todo (.txt)</button>
+        <button id="textBtn" class="ghost mini" type="button" disabled>Ver como texto</button>
+        <button id="clear" class="ghost mini" type="button" disabled>Borrar historial</button>
+      </div>
+    </div>
+    <div id="confirmBar" class="confirm" role="alertdialog" aria-labelledby="confirmText" hidden>
+      <p id="confirmText">¿Borrar todo el historial? No se puede deshacer. Si quieres conservar los códigos, descarga el .txt antes.</p>
+      <div class="confirm-actions">
+        <button id="confirmYes" class="danger mini" type="button">Sí, borrar todo</button>
+        <button id="confirmNo" class="ghost mini" type="button">Cancelar</button>
+      </div>
+    </div>
+    <div id="textPanel" class="panel" hidden>
+      <div class="panel-head">
+        <h3>Lista completa</h3>
+        <button id="textClose" class="ghost mini" type="button">Cerrar</button>
+      </div>
+      <textarea id="textArea" class="textarea" readonly aria-label="Lista de códigos en texto"></textarea>
+      <div class="confirm-actions">
+        <button id="textCopy" class="primary mini" type="button">Copiar todo</button>
+      </div>
+    </div>
+    <div id="list"></div>
+    <div id="moreWrap" class="more" hidden>
+      <button id="more" class="ghost" type="button">Ver más antiguos</button>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  var SETS = {
+    u: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    l: "abcdefghijklmnopqrstuvwxyz",
+    d: "0123456789",
+    s: "!@#$%^&*()-_=+[]{};:,.?/"
+  };
+  var ALL = SETS.u + SETS.l + SETS.d + SETS.s;
+  var LEN = 20, MIN_PER_TYPE = 2;
+  var LOCAL_KEY = "codigos-historial-v1";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var items = [];        // [{id, code, name, ts}] del más nuevo al más viejo
+  var mode = "local";    // "local" o "db"
+  var col = null;        // colección privada de db
+  var current = "";
+  var pendingRender = false;
+  var PAGE = 500;        // códigos que se piden por vez
+  var gone = new Set();  // ids ya borrados, para que no reaparezcan
+  var known = new Map(); // en modo db: todo lo cargado hasta ahora
+  var hasMore = false;
+  var exhausted = false;
+  var loadingMore = false;
+
+  /* ---------- Generación ---------- */
+  function rnd(n) {
+    var lim = Math.floor(4294967296 / n) * n;
+    var b = new Uint32Array(1);
+    do { crypto.getRandomValues(b); } while (b[0] >= lim);
+    return b[0] % n;
+  }
+  function pick(s) { return s.charAt(rnd(s.length)); }
+  function make() {
+    var out = [], k, i;
+    ["u", "l", "d", "s"].forEach(function (k) {
+      for (i = 0; i < MIN_PER_TYPE; i++) out.push(pick(SETS[k]));
+    });
+    while (out.length < LEN) out.push(pick(ALL));
+    for (i = out.length - 1; i > 0; i--) {
+      var j = rnd(i + 1), t = out[i]; out[i] = out[j]; out[j] = t;
+    }
+    return out.join("");
+  }
+  function cls(ch) {
+    if (SETS.u.indexOf(ch) > -1) return "u";
+    if (SETS.l.indexOf(ch) > -1) return "l";
+    if (SETS.d.indexOf(ch) > -1) return "d";
+    return "s";
+  }
+  function paint(el, code) {
+    el.textContent = "";
+    for (var i = 0; i < code.length; i++) {
+      var s = document.createElement("span");
+      s.className = "c-" + cls(code.charAt(i));
+      s.textContent = code.charAt(i);
+      el.appendChild(s);
+    }
+  }
+
+  /* ---------- Avisos y copiar ---------- */
+  var toastTimer;
+  function flash(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2400);
+  }
+  function selectEl(el) {
+    try {
+      var r = document.createRange();
+      r.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+    } catch (e) {}
+  }
+  function legacyCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.setAttribute("aria-hidden", "true");
+    ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;";
+    var prev = document.activeElement;
+    document.body.appendChild(ta);
+    var ok = false;
+    try {
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      ok = document.execCommand("copy");
+    } catch (e) {}
+    ta.remove();
+    if (prev && prev.focus) { try { prev.focus(); } catch (e) {} }
+    return ok;
+  }
+  function copyText(text, el) {
+    if (legacyCopy(text)) { flash("Código copiado"); return; }
+    var p;
+    try { p = navigator.clipboard.writeText(text); } catch (e) { p = Promise.reject(e); }
+    p.then(function () { flash("Código copiado"); }, function () {
+      selectEl(el);
+      flash("No se pudo copiar solo. Quedó seleccionado para que lo copies.");
+    });
+  }
+
+  /* ---------- Formato de fecha y hora ---------- */
+  var fDay = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  var fTime = new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  var fDate = new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" });
+  function dayKey(d) { return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  /* ---------- Almacenamiento local (respaldo) ---------- */
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(LOCAL_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(items)); } catch (e) {}
+  }
+  function newId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  /* ---------- Historial ---------- */
+  function editing() {
+    var a = document.activeElement;
+    return !!(a && a.classList && a.classList.contains("name"));
+  }
+  function row(it, d) {
+    var r = document.createElement("div");
+    r.className = "row";
+
+    var t = document.createElement("time");
+    t.className = "time";
+    t.dateTime = d.toISOString();
+    t.textContent = fTime.format(d);
+
+    var c = document.createElement("code");
+    c.className = "hcode";
+    paint(c, it.code);
+
+    var inp = document.createElement("input");
+    inp.type = "text";
+    inp.id = "nombre-" + it.id;
+    inp.className = "name";
+    inp.maxLength = 60;
+    inp.placeholder = "Poner nombre";
+    inp.value = it.name || "";
+    inp.setAttribute("aria-label", "Nombre del código generado a las " + fTime.format(d));
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") inp.blur(); });
+    inp.addEventListener("change", function () { rename(it.id, inp.value.trim()); });
+
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "ghost mini";
+    b.textContent = "Copiar";
+    b.addEventListener("click", function () { copyText(it.code, c); });
+
+    r.appendChild(t); r.appendChild(c); r.appendChild(inp); r.appendChild(b);
+    return r;
+  }
+  function render() {
+    var list = $("list");
+    list.textContent = "";
+    $("count").textContent = items.length
+      ? items.length + (hasMore ? "+" : "") + (items.length === 1 ? " código" : " códigos")
+      : "";
+    $("dl").disabled = !items.length;
+    $("clear").disabled = !items.length;
+    $("textBtn").disabled = !items.length;
+    $("moreWrap").hidden = !hasMore;
+    if (!items.length) {
+      var p = document.createElement("p");
+      p.className = "empty-state";
+      var s = document.createElement("strong");
+      s.textContent = "Todavía no hay códigos. ";
+      p.appendChild(s);
+      p.appendChild(document.createTextNode("Pulsa «Generar código» y cada uno quedará aquí con su día y hora."));
+      list.appendChild(p);
+      return;
+    }
+    var last = null, group = null;
+    items.forEach(function (it) {
+      var d = new Date(it.ts);
+      var k = dayKey(d);
+      if (k !== last) {
+        group = document.createElement("section");
+        group.className = "day";
+        var h = document.createElement("h3");
+        h.textContent = cap(fDay.format(d));
+        group.appendChild(h);
+        list.appendChild(group);
+        last = k;
+      }
+      group.appendChild(row(it, d));
+    });
+  }
+  function safeRender() {
+    if (editing()) { pendingRender = true; return; }
+    pendingRender = false;
+    render();
+  }
+  $("list").addEventListener("focusout", function () {
+    if (pendingRender) setTimeout(function () { if (!editing()) safeRender(); }, 0);
+  });
+
+  function add(code) {
+    var it = { id: newId(), code: code, name: "", ts: new Date().toISOString() };
+    if (mode === "db" && col) {
+      var ref = col.doc();
+      return ref.set({ code: it.code, name: "", ts: it.ts }).catch(function () {
+        flash("No se pudo guardar en el historial.");
+      });
+    }
+    items.unshift(it);
+    saveLocal();
+    safeRender();
+    return Promise.resolve();
+  }
+  function rename(id, name) {
+    var it = items.filter(function (x) { return x.id === id; })[0];
+    if (!it || (it.name || "") === name) return;
+    it.name = name;
+    if (mode === "db" && col) {
+      col.doc(id).update({ name: name }).catch(function () {
+        flash("No se pudo guardar el nombre.");
+      });
+    } else {
+      saveLocal();
+    }
+  }
+
+  /* ---------- Almacenamiento privado (db) ---------- */
+  function toItem(d) {
+    var v = d.data() || {};
+    return { id: d.id, code: String(v.code || ""), name: String(v.name || ""), ts: v.ts };
+  }
+  function rebuild() {
+    items = Array.from(known.values()).sort(function (a, b) {
+      return a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0;
+    });
+  }
+  async function loadMore() {
+    if (mode !== "db" || !col || loadingMore) return;
+    loadingMore = true;
+    var btn = $("more");
+    btn.disabled = true;
+    try {
+      var oldest = items.length ? items[items.length - 1].ts : null;
+      var q = col.orderBy("ts", "desc");
+      if (oldest) q = q.where("ts", "<", oldest);
+      var snap = await q.limit(PAGE).get();
+      snap.docs.forEach(function (d) { if (!known.has(d.id)) known.set(d.id, toItem(d)); });
+      if (snap.size < PAGE) { exhausted = true; hasMore = false; }
+      rebuild();
+      safeRender();
+    } catch (e) {
+      flash("No se pudieron cargar más códigos.");
+    }
+    loadingMore = false;
+    btn.disabled = false;
+  }
+
+  /* ---------- Descarga en texto ---------- */
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  async function fetchAll() {
+    if (mode !== "db" || !col) return items.slice();
+    var all = [], cursor = null;
+    for (var i = 0; i < 30; i++) {
+      var q = col.orderBy("ts", "desc");
+      if (cursor) q = q.where("ts", "<", cursor);
+      var snap = await q.limit(1000).get();
+      snap.docs.forEach(function (d) { all.push(toItem(d)); });
+      if (snap.size < 1000) break;
+      cursor = all[all.length - 1].ts;
+    }
+    return all;
+  }
+  function buildText(list) {
+    var now = new Date();
+    var lines = [
+      "Historial de códigos",
+      "Descargado: " + fDate.format(now) + " " + fTime.format(now),
+      "Total: " + list.length,
+      "",
+      "Fecha y hora | Código | Nombre",
+      "-----"
+    ];
+    list.forEach(function (it) {
+      var d = new Date(it.ts);
+      lines.push(fDate.format(d) + " " + fTime.format(d) + " | " + it.code + " | " + (it.name || "(sin nombre)"));
+    });
+    return lines.join("\r\n") + "\r\n";
+  }
+  async function download() {
+    var btn = $("dl");
+    btn.disabled = true;
+    try {
+      var list = await fetchAll();
+      if (!list.length) { flash("Todavía no hay códigos para descargar."); return; }
+      var text = buildText(list);
+      var now = new Date();
+      var filename = "codigos-" + now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + ".txt";
+      var dls = null;
+      try { dls = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch (e) {}
+      if (dls) {
+        try {
+          await dls.save({ filename: filename, data: text });
+          flash("Archivo guardado. Si no lo encuentras, usa «Ver como texto».");
+        } catch (e) {
+          if (!e || e.code !== "declined") flash("No se pudo descargar el archivo.");
+        }
+      } else {
+        var url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }
+    } catch (e) {
+      flash("No se pudo preparar el archivo.");
+    } finally {
+      btn.disabled = !items.length;
+    }
+  }
+
+  /* ---------- Lista como texto ---------- */
+  async function showText() {
+    var btn = $("textBtn");
+    btn.disabled = true;
+    try {
+      var list = await fetchAll();
+      if (!list.length) { flash("Todavía no hay códigos."); return; }
+      $("textArea").value = buildText(list);
+      $("textPanel").hidden = false;
+      $("textArea").scrollTop = 0;
+      $("textPanel").scrollIntoView({ block: "nearest" });
+    } catch (e) {
+      flash("No se pudo preparar la lista.");
+    } finally {
+      btn.disabled = !items.length;
+    }
+  }
+  function copyListText() {
+    var ta = $("textArea");
+    if (legacyCopy(ta.value)) { flash("Lista copiada"); return; }
+    var p;
+    try { p = navigator.clipboard.writeText(ta.value); } catch (e) { p = Promise.reject(e); }
+    p.then(function () { flash("Lista copiada"); }, function () {
+      ta.focus();
+      ta.select();
+      flash("No se pudo copiar solo. Quedó seleccionada para que la copies.");
+    });
+  }
+
+  /* ---------- Borrar historial ---------- */
+  async function clearAll() {
+    var yes = $("confirmYes"), no = $("confirmNo");
+    var label = yes.textContent;
+    yes.disabled = true;
+    no.disabled = true;
+    var failed = 0;
+    try {
+      if (mode === "db" && col) {
+        var all = await fetchAll();
+        for (var i = 0; i < all.length; i += 20) {
+          var chunk = all.slice(i, i + 20);
+          var res = await Promise.all(chunk.map(function (it) {
+            return col.doc(it.id).delete().then(function () { gone.add(it.id); return true; }, function () { return false; });
+          }));
+          res.forEach(function (ok) { if (!ok) failed++; });
+          yes.textContent = "Borrando " + Math.min(i + 20, all.length) + " de " + all.length;
+        }
+        gone.forEach(function (id) { known.delete(id); });
+        exhausted = false;
+        hasMore = false;
+        rebuild();
+      } else {
+        items = [];
+        hasMore = false;
+        saveLocal();
+      }
+      flash(failed ? "No se pudieron borrar " + failed + " códigos." : "Historial borrado");
+    } catch (e) {
+      flash("No se pudo borrar el historial.");
+    }
+    yes.textContent = label;
+    yes.disabled = false;
+    no.disabled = false;
+    $("confirmBar").hidden = true;
+    render();
+  }
+
+  async function initStore() {
+    try {
+      if (!window.claude || !window.claude.use) return;
+      var res = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      var db = res[0], user = res[1];
+      var uid = user ? await user.id() : null;
+      if (!db || !uid) return;
+      var c = db.doc("data/users/" + uid + "/profile").collection("codes");
+
+      var local = items.slice();
+      var allSaved = true;
+      for (var i = 0; i < local.length; i++) {
+        try { await c.doc(local[i].id).set({ code: local[i].code, name: local[i].name || "", ts: local[i].ts }); }
+        catch (e) { allSaved = false; }
+      }
+      if (!allSaved) return;
+      if (local.length) { try { localStorage.removeItem(LOCAL_KEY); } catch (e) {} }
+
+      col = c;
+      mode = "db";
+      c.orderBy("ts", "desc").limit(PAGE).onSnapshot(function (snap) {
+        snap.docs.forEach(function (d) { if (!gone.has(d.id)) known.set(d.id, toItem(d)); });
+        hasMore = snap.size >= PAGE && !exhausted;
+        rebuild();
+        safeRender();
+      }, function () {
+        flash("Se perdió la conexión con el historial guardado.");
+      });
+    } catch (e) { /* se queda en almacenamiento local */ }
+  }
+
+  /* ---------- Eventos ---------- */
+  $("gen").addEventListener("click", function () {
+    current = make();
+    var el = $("code");
+    el.classList.remove("empty");
+    paint(el, current);
+    $("copy").disabled = false;
+    add(current);
+  });
+  $("copy").addEventListener("click", function () {
+    if (current) copyText(current, $("code"));
+  });
+
+  $("textBtn").addEventListener("click", showText);
+  $("textCopy").addEventListener("click", copyListText);
+  $("textClose").addEventListener("click", function () { $("textPanel").hidden = true; });
+  $("clear").addEventListener("click", function () {
+    $("confirmBar").hidden = false;
+    $("confirmNo").focus();
+  });
+  $("confirmNo").addEventListener("click", function () { $("confirmBar").hidden = true; });
+  $("confirmYes").addEventListener("click", clearAll);
+  $("more").addEventListener("click", loadMore);
+  $("dl").addEventListener("click", download);
+
+  items = loadLocal();
+  render();
+  initStore();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

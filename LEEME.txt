@@ -1,0 +1,20 @@
+GENERADOR DE CÓDIGOS - PAQUETE PARA INSTALAR COMO APP
+
+Qué hay aquí
+- index.html: la app
+- manifest.webmanifest, sw.js, icon-*.png: lo que permite instalarla y usarla sin conexión
+
+Cómo ponerla en tu celular
+1. Sube este .zip (o su contenido) a un sitio gratuito. La forma más sencilla es Netlify Drop:
+   entra a app.netlify.com/drop, arrastra el .zip y espera a que te dé un enlace que termina en .netlify.app.
+   Es más fácil hacerlo desde un computador. Crea una cuenta gratuita y reclama el sitio para no perderlo.
+   Alternativas: GitHub Pages o Cloudflare Pages.
+2. En el celular, abre ese enlace con Chrome.
+3. Toca el menú de tres puntos y elige "Instalar app" o "Agregar a la pantalla de inicio".
+   Aparecerá el ícono "Códigos" en tu pantalla.
+
+Importante
+- El historial se guarda en tu celular, por navegador y por dirección del sitio. Si cambias la dirección
+  (por ejemplo, el nombre del sitio), empezarás con el historial vacío. Si borras los datos de Chrome, se pierde.
+- Usa de vez en cuando "Descargar todo (.txt)" para guardar una copia de tus códigos.
+- Para actualizar la app, vuelve a subir los archivos al mismo sitio.
